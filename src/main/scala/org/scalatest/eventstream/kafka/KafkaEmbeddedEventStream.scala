@@ -1,6 +1,7 @@
-package org.scalatest.eventstream
+package org.scalatest.eventstream.kafka
 
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
+import org.scalatest.eventstream.EmbeddedEventStream
 
 /**
   * Created by prayagupd
@@ -9,11 +10,6 @@ import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 
 case class EventStreamConfig(eventStreamPort: Int = 9092, eventStreamStatePort :Int = 2181,
                              nodes: Map[String, String] = Map.empty)
-
-trait EmbeddedEventStream {
-  def startBroker(implicit eventStreamConfig: EventStreamConfig)
-  def stopBroker()
-}
 
 class KafkaEmbeddedEventStream extends EmbeddedEventStream {
 
