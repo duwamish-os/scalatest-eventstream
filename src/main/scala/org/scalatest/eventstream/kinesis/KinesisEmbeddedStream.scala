@@ -1,13 +1,14 @@
 package org.scalatest.eventstream.kinesis
 
-import java.util.Date
+import java.nio.ByteBuffer
+import java.util.{Date, UUID}
 
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.kinesis.AmazonKinesisClient
-import com.amazonaws.services.kinesis.model.{GetRecordsRequest, GetShardIteratorRequest}
+import com.amazonaws.services.kinesis.model.{GetRecordsRequest, GetShardIteratorRequest, PutRecordRequest}
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 import org.scalatest.eventstream.{ConsumerConfig, EmbeddedStream, StreamConfig}
@@ -58,7 +59,16 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getStreamStatus)
   }
 
-  override def appendEvent(stream: String, event: String): (Long, Long, Int) = null
+  override def appendEvent(stream: String, event: String): (String, Long, String) = {
+    val nativeEvent = new PutRecordRequest()
+    nativeEvent.setStreamName(stream)
+    nativeEvent.setData(ByteBuffer.wrap(event.getBytes))
+    nativeEvent.setPartitionKey(UUID.randomUUID().toString) //TODO
+
+    val response = nativeConsumer.putRecord(nativeEvent)
+
+    (response.getSequenceNumber, 0l, response.getShardId)
+  }
 
   override def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String):
   List[JSONObject] = {
@@ -90,7 +100,8 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   def waitWhileStreamIsActed(stream: String, expectedStatus: String) = {
     var iteration = 0
     while (!streamIsActed(stream, expectedStatus) && iteration < MAX_ITERATIONS) {
-      Thread.sleep(10 * 1000)
+      Thread.sleep(9 * 1000)
+      println(s"waited ${iteration * 9} secs")
       iteration = iteration + 1
     }
     if (!streamIsActed(stream, expectedStatus)) {

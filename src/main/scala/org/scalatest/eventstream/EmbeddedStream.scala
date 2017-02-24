@@ -14,7 +14,7 @@ trait EmbeddedStream {
   def destroyBroker(implicit eventStreamConfig: StreamConfig)
 
   def createStreamAndWait(stream: String, partition: Int) : (String, List[String], String)
-  def appendEvent(stream:String, event: String) : (Long, Long, Int)
+  def appendEvent(stream:String, event: String) : (String, Long, String)
   def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String): List[JSONObject]
   def assertStreamExists(streamConfig: StreamConfig): Unit
   def dropConsumerState(stateTable : String) : String

@@ -52,7 +52,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     logsDirs.clear()
   }
 
-  override def appendEvent(stream: String, event: String): (Long, Long, Int) = {
+  override def appendEvent(stream: String, event: String): (String, Long, String) = {
     val properties = new Properties() {{
       val resource = classOf[KafkaEmbeddedStream].getClassLoader.getResourceAsStream("producer.properties")
       println("==========================================")
@@ -64,7 +64,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     val kafkaProducer = new KafkaProducer[String, String](properties)
     val response = kafkaProducer.send(new ProducerRecord[String, String](stream, event))
 
-    (response.get().offset(), response.get().checksum(), response.get().partition())
+    (response.get().offset()+"", response.get().checksum(), response.get().partition()+"")
   }
 
   override def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String): List[JSONObject] = {

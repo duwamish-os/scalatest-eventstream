@@ -1,11 +1,13 @@
-scalatest stream-specs
-----------------------
+package org.scalatest.eventstream.kinesis
 
-Kinesis usage
--------------
-- seup auth profile in `application.properties`
+import org.scalatest.eventstream.{ConsumerConfig, StreamConfig}
+import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
-```
+/**
+  * Created by prayagupd
+  * on 2/23/17.
+  */
+
 class KinesisEmbeddedStreamSpecs extends FunSuite with BeforeAndAfterEach {
 
   val eventStream = new KinesisEmbeddedStream
@@ -30,5 +32,3 @@ class KinesisEmbeddedStreamSpecs extends FunSuite with BeforeAndAfterEach {
   }
 
 }
-
-```
