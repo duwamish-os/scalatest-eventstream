@@ -32,7 +32,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
   private[this] var brokers: Option[KafkaServer] = None
   private[this] val logsDirs = mutable.Buffer.empty[Directory]
 
-  override def startBroker(implicit streamConfig: StreamConfig): Unit = {
+  override def startBroker(implicit streamConfig: StreamConfig): (String, List[String], String) = {
 
     val stateLogsDir = Directory.makeTemp(s"state-logs-${new Date().getTime}")
     val brokerLogsDir = Directory.makeTemp(s"stream-logs-${new Date().getTime}")
@@ -42,6 +42,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
 
     logsDirs ++= Seq(stateLogsDir, brokerLogsDir)
 
+    (streamConfig.stream, List("1"), "ACTIVE")
   }
 
   override def destroyBroker(implicit streamConfig: StreamConfig): Unit = {
@@ -85,12 +86,12 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     events.map(x => new JSONObject(x.value())).toList
   }
 
-  override def assertStreamExists(streamConfig: StreamConfig, stream: String): Unit = {
+  override def assertStreamExists(streamConfig: StreamConfig): Unit = {
     assert(AdminUtils.topicExists(new ZkUtils(new ZkClient(s"localhost:${streamConfig.streamStateTcpPort}",
-      10000, 15000), new ZkConnection(s"localhost:${streamConfig.streamStateTcpPort}"), false), stream))
+      10000, 15000), new ZkConnection(s"localhost:${streamConfig.streamStateTcpPort}"), false), streamConfig.stream))
   }
 
-  override def createStreamAndWait(stream: String, partition: Int): (String, String) = (null, null)
+  override def createStreamAndWait(stream: String, partition: Int): (String, List[String], String) = ("", List.empty, "")
 
   def startZooKeeper(zkLogsDir: Directory)(
     implicit config: EmbeddedKafkaConfig): Unit = {

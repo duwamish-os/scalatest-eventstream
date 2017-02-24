@@ -10,12 +10,12 @@ import org.json.JSONObject
   */
 
 trait EmbeddedStream {
-  def startBroker(implicit eventStreamConfig: StreamConfig)
+  def startBroker(implicit eventStreamConfig: StreamConfig): (String, List[String], String)
   def destroyBroker(implicit eventStreamConfig: StreamConfig)
 
-  def createStreamAndWait(stream: String, partition: Int) : (String, String)
+  def createStreamAndWait(stream: String, partition: Int) : (String, List[String], String)
   def appendEvent(stream:String, event: String) : (Long, Long, Int)
   def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String): List[JSONObject]
-  def assertStreamExists(streamConfig: StreamConfig, stream: String): Unit
+  def assertStreamExists(streamConfig: StreamConfig): Unit
   def dropConsumerState(stateTable : String) : String
 }

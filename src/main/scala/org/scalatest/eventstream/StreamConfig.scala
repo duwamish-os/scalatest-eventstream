@@ -8,5 +8,5 @@ package org.scalatest.eventstream
 case class StreamConfig(streamTcpPort: Int = 9092,
                         streamStateTcpPort :Int = 2181,
                         stream: String,
-                        partition: Int = 1,
+                        numOfPartition: Int = 1,
                         nodes: Map[String, String] = Map.empty)

@@ -7,9 +7,12 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.kinesis.AmazonKinesisClient
+import com.amazonaws.services.kinesis.model.{GetRecordsRequest, GetShardIteratorRequest}
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 import org.scalatest.eventstream.{ConsumerConfig, EmbeddedStream, StreamConfig}
+
+import scala.collection.JavaConversions._
 
 /**
   * Created by prayagupd
@@ -30,17 +33,18 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
   private val nativeConsumer = new AmazonKinesisClient(credentials, httpConfiguration)
 
-  override def startBroker(implicit streamConfig: StreamConfig): Unit = {
+  override def startBroker(implicit streamConfig: StreamConfig) : (String, List[String], String) = {
     println(s"Starting a broker at ${new Date()}")
-    createStreamAndWait(streamConfig.stream, streamConfig.partition)
+    createStreamAndWait(streamConfig.stream, streamConfig.numOfPartition)
   }
 
-  override def createStreamAndWait(stream: String, partition: Int): (String, String) = {
+  override def createStreamAndWait(stream: String, partition: Int): (String, List[String], String) = {
     val created = nativeConsumer.createStream(stream, partition).getSdkHttpMetadata.getHttpStatusCode == 200
     assert(created)
     waitWhileStreamIsActed(stream, "ACTIVE")
     val desc = nativeConsumer.describeStream(stream)
-    (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getStreamStatus)
+    (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getShards.map(_.getShardId).toList,
+      desc.getStreamDescription.getStreamStatus)
   }
 
   override def destroyBroker(implicit streamConfig: StreamConfig): Unit = {
@@ -56,15 +60,40 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
   override def appendEvent(stream: String, event: String): (Long, Long, Int) = null
 
-  override def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String): List[JSONObject] = List.empty
+  override def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String):
+  List[JSONObject] = {
+    val getShardIteratorRequest: GetShardIteratorRequest = new GetShardIteratorRequest
+    getShardIteratorRequest.setStreamName(stream)
+    getShardIteratorRequest.setShardId(consumerConfig.partitionId)
+    getShardIteratorRequest.setShardIteratorType(consumerConfig.strategy)
+
+    val iterator = nativeConsumer.getShardIterator(getShardIteratorRequest).getShardIterator
+
+    val recordsRequest = new GetRecordsRequest()
+    recordsRequest.setShardIterator(iterator)
+    recordsRequest.setLimit(10)
+
+    println(s"consuming - ${consumerConfig.partitionId} ${iterator}")
+
+    var events = nativeConsumer.getRecords(recordsRequest)
+
+    if(events.getRecords.isEmpty) {
+      Thread.sleep(1000)
+    }
+
+    events = nativeConsumer.getRecords(recordsRequest)
+
+    events.getRecords.map(payloadBytes => new String(payloadBytes.getData.array()))
+      .map(json => new JSONObject(json)).toList
+  }
 
   def waitWhileStreamIsActed(stream: String, expectedStatus: String) = {
     var iteration = 0
-    while(!streamIsActed(stream, expectedStatus) && iteration < MAX_ITERATIONS){
+    while (!streamIsActed(stream, expectedStatus) && iteration < MAX_ITERATIONS) {
       Thread.sleep(10 * 1000)
       iteration = iteration + 1
     }
-    if(!streamIsActed(stream, expectedStatus)) {
+    if (!streamIsActed(stream, expectedStatus)) {
       println(s"Could not process in ${MAX_ITERATIONS * 10} seconds")
       throw new RuntimeException(s"Could not process in ${MAX_ITERATIONS * 10} seconds")
     }
@@ -76,7 +105,10 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     actualStatus.equals(expectedStatus)
   }
 
-  override def assertStreamExists(streamConfig: StreamConfig, stream: String): Unit = assert(1 == 2)
+  override def assertStreamExists(streamConfig: StreamConfig): Unit =  {
+    val actualStatus = nativeConsumer.describeStream(streamConfig.stream).getStreamDescription.getStreamStatus
+    assert(actualStatus == "ACTIVE")
+  }
 
   override def dropConsumerState(stateTable: String): String = {
     val consumerOffset = new AmazonDynamoDBClient(credentials, httpConfiguration)
