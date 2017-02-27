@@ -23,11 +23,11 @@ class KinesisEmbeddedStreamSpecs extends FunSuite with BeforeAndAfterEach {
 
   test("appends and consumes an event") {
 
-    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer", partitionId = partitionId, strategy = "TRIM_HORIZON")
     eventStream.appendEvent("TestStream", """{"eventId" : "uniqueId", "data" : "something-secret"}""".stripMargin)
 
     Thread.sleep(1500)
 
+    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer", partitionId = partitionId, strategy = "TRIM_HORIZON")
     assert(eventStream.consumeEvent(streamConfig, consumerConfig, streamConfig.stream).size == 1)
   }
 

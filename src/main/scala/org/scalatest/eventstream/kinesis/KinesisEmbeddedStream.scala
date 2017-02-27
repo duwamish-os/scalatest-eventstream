@@ -8,7 +8,7 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.kinesis.AmazonKinesisClient
-import com.amazonaws.services.kinesis.model.{GetRecordsRequest, GetShardIteratorRequest, PutRecordRequest}
+import com.amazonaws.services.kinesis.model.{AmazonKinesisException, GetRecordsRequest, GetShardIteratorRequest, PutRecordRequest}
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 import org.scalatest.eventstream.{ConsumerConfig, EmbeddedStream, StreamConfig}
@@ -23,14 +23,18 @@ import scala.collection.JavaConversions._
 class KinesisEmbeddedStream extends EmbeddedStream {
 
   private val MAX_ITERATIONS = 6
-  private val PROXYHOST: String = ConfigFactory.load("application.properties").getString("stream.http.proxy.host")
-  private val PORT: Int = ConfigFactory.load("application.properties").getInt("stream.http.proxy.port")
+  private val A_SECOND = 1000
+  private val EACH_WAIT = 9
+
+  private val ProxyHostOpt = Option(ConfigFactory.load("application.properties").getString("stream.http.proxy.host"))
+  private val PortOpt = Option(ConfigFactory.load("application.properties").getInt("stream.http.proxy.port"))
 
   private val awsAuthProfile = ConfigFactory.load("application.properties").getString("authentication.profile")
 
   private val credentials: ProfileCredentialsProvider = new ProfileCredentialsProvider(awsAuthProfile)
   private val httpConfiguration: ClientConfiguration = new ClientConfiguration()
-    .withProxyHost(PROXYHOST).withProxyPort(PORT)
+    ProxyHostOpt.map(httpConfiguration.setProxyHost(_))
+    PortOpt.map(httpConfiguration.setProxyPort(_))
 
   private val nativeConsumer = new AmazonKinesisClient(credentials, httpConfiguration)
 
@@ -54,9 +58,15 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     assert(deleted)
 
     waitWhileStreamIsActed(streamConfig.stream, "DELETED")
-    val desc = nativeConsumer.describeStream(streamConfig.stream)
-    assert(desc.getStreamDescription.getStreamStatus == "DELETED")
-    (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getStreamStatus)
+
+    try {
+      val desc = nativeConsumer.describeStream(streamConfig.stream)
+      assert(desc.getStreamDescription.getStreamStatus == "DELETED")
+      (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getStreamStatus)
+    } catch {
+      //stream could have been deleted successfully, so query would fail
+      case e : Exception => println("Error occured while querying the stream status", e.getMessage)
+    }
   }
 
   override def appendEvent(stream: String, event: String): (String, Long, String) = {
@@ -88,7 +98,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     var events = nativeConsumer.getRecords(recordsRequest)
 
     if(events.getRecords.isEmpty) {
-      Thread.sleep(1000)
+      Thread.sleep(A_SECOND)
     }
 
     events = nativeConsumer.getRecords(recordsRequest)
@@ -100,20 +110,28 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   def waitWhileStreamIsActed(stream: String, expectedStatus: String) = {
     var iteration = 0
     while (!streamIsActed(stream, expectedStatus) && iteration < MAX_ITERATIONS) {
-      Thread.sleep(9 * 1000)
-      println(s"waited ${iteration * 9} secs")
+      Thread.sleep(EACH_WAIT * A_SECOND)
+      println(s"waited ${iteration * EACH_WAIT} secs")
       iteration = iteration + 1
     }
     if (!streamIsActed(stream, expectedStatus)) {
-      println(s"Could not process in ${MAX_ITERATIONS * 10} seconds")
+      println(s"Could not process in ${MAX_ITERATIONS * EACH_WAIT} seconds")
       throw new RuntimeException(s"Could not process in ${MAX_ITERATIONS * 10} seconds")
     }
   }
 
   def streamIsActed(stream: String, expectedStatus: String) = {
-    val actualStatus = nativeConsumer.describeStream(stream).getStreamDescription.getStreamStatus
-    println(s"stream $stream is $actualStatus== waiting to be ${expectedStatus}")
-    actualStatus.equals(expectedStatus)
+    try {
+      val actualStatus = nativeConsumer.describeStream(stream).getStreamDescription.getStreamStatus
+      println(s"stream $stream is $actualStatus == waiting to be ${expectedStatus}")
+      actualStatus.equals(expectedStatus)
+    } catch {
+      case e : AmazonKinesisException => {
+        println(s"Error querying the stream ${stream}, as it might have been " +
+          s"already deleted, ${e.getMessage}.")
+        true
+      }
+    }
   }
 
   override def assertStreamExists(streamConfig: StreamConfig): Unit =  {
@@ -126,7 +144,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     val dynamoDB = new DynamoDB(consumerOffset)
     val deleteState = dynamoDB.getTable(stateTable).delete()
     assert(deleteState.getSdkHttpMetadata.getHttpStatusCode == 200)
-    Thread.sleep(1000)
+    Thread.sleep(A_SECOND)
     deleteState.getTableDescription.getTableStatus
   }
 }
