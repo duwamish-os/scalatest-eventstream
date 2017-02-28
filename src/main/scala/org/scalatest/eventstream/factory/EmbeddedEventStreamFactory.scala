@@ -12,7 +12,7 @@ import org.scalatest.eventstream.kinesis.KinesisEmbeddedStream
 
 class EmbeddedEventStreamFactory {
   def create(): EmbeddedStream = {
-    ConfigFactory.load("application.properties").getString("eventstream.driver") match {
+    ConfigFactory.load("application.properties").getString("stream.driver") match {
       case "Kafka" => new KafkaEmbeddedStream
       case "Kinesis" => new KinesisEmbeddedStream
       case _ => throw new RuntimeException("You forgot to configure the stream driver.")

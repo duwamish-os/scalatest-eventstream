@@ -54,18 +54,23 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
   override def destroyBroker(implicit streamConfig: StreamConfig): Unit = {
     println(s"Destroying a broker at ${new Date()} with dropping ${streamConfig.stream}")
-    val deleted = nativeConsumer.deleteStream(streamConfig.stream).getSdkHttpMetadata.getHttpStatusCode == 200
-    assert(deleted)
-
-    waitWhileStreamIsActed(streamConfig.stream, "DELETED")
-
     try {
-      val desc = nativeConsumer.describeStream(streamConfig.stream)
-      assert(desc.getStreamDescription.getStreamStatus == "DELETED")
-      (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getStreamStatus)
+      val deleted = nativeConsumer.deleteStream(streamConfig.stream).getSdkHttpMetadata.getHttpStatusCode == 200
+      assert(deleted)
+      waitWhileStreamIsActed(streamConfig.stream, "DELETED")
+
+      try {
+        val desc = nativeConsumer.describeStream(streamConfig.stream)
+        assert(desc.getStreamDescription.getStreamStatus == "DELETED")
+        (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getStreamStatus)
+      } catch {
+        //stream could have been deleted successfully, so query would fail
+        case e: AmazonKinesisException => println("Drop request submitted, " +
+          "but error occured while querying the stream status", e.getMessage)
+      }
     } catch {
-      //stream could have been deleted successfully, so query would fail
-      case e : Exception => println("Error occured while querying the stream status", e.getMessage)
+      case e: AmazonKinesisException => println("Couldn't submit Drop request, " +
+        "error occured while querying the stream status", e.getMessage)
     }
   }
 
