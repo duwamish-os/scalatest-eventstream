@@ -1,15 +1,15 @@
 package org.scalatest.eventstream.kinesis
 
 import java.nio.ByteBuffer
-import java.util.{Date, UUID}
+import java.util.{Date, Properties, UUID}
 
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.kinesis.AmazonKinesisClient
 import com.amazonaws.services.kinesis.model.{AmazonKinesisException, GetRecordsRequest, GetShardIteratorRequest, PutRecordRequest}
-import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 import org.scalatest.eventstream.{ConsumerConfig, EmbeddedStream, StreamConfig}
 
@@ -26,17 +26,27 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   private val A_SECOND = 1000
   private val EACH_WAIT = 9
 
-  private val ProxyHostOpt = Option(ConfigFactory.load("application.properties").getString("stream.http.proxy.host"))
-  private val PortOpt = Option(ConfigFactory.load("application.properties").getInt("stream.http.proxy.port"))
+  private val AppConfig = new Properties(){{
+    load(this.getClass.getClassLoader.getResourceAsStream("application.properties"))
+  }}
 
-  private val awsAuthProfile = ConfigFactory.load("application.properties").getString("authentication.profile")
+  private val ProxyHostOpt = Option[String](AppConfig.getProperty("stream.http.proxy.host"))
+  private val PortOpt = Option[String](AppConfig.getProperty("stream.http.proxy.port"))
+
+  val region = AppConfig.getProperty("stream.region")
+
+  private val awsAuthProfile = AppConfig.getProperty("authentication.profile")
 
   private val credentials: ProfileCredentialsProvider = new ProfileCredentialsProvider(awsAuthProfile)
   private val httpConfiguration: ClientConfiguration = new ClientConfiguration()
     ProxyHostOpt.map(httpConfiguration.setProxyHost(_))
-    PortOpt.map(httpConfiguration.setProxyPort(_))
+    PortOpt.map(x => httpConfiguration.setProxyPort(x.toInt))
 
   private val nativeConsumer = new AmazonKinesisClient(credentials, httpConfiguration)
+
+  if(region != null && region != "") {
+    nativeConsumer.withRegion(Regions.fromName(region))
+  }
 
   override def startBroker(implicit streamConfig: StreamConfig) : (String, List[String], String) = {
     println(s"Starting a broker at ${new Date()}")
