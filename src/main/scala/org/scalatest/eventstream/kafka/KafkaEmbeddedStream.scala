@@ -13,6 +13,7 @@ import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.zookeeper.server.{ServerCnxnFactory, ZooKeeperServer}
 import org.json.JSONObject
+import org.scalatest.eventstream.events.Event
 import org.scalatest.eventstream.{ConsumerConfig, EmbeddedStream, StreamConfig}
 
 import scala.collection.JavaConversions._
@@ -52,7 +53,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     logsDirs.clear()
   }
 
-  override def appendEvent(stream: String, event: String): (String, Long, String) = {
+  override def appendEvent(stream: String, event: String): Event = {
     val properties = new Properties() {{
       val resource = classOf[KafkaEmbeddedStream].getClassLoader.getResourceAsStream("producer.properties")
       println("==========================================")
@@ -64,7 +65,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     val kafkaProducer = new KafkaProducer[String, String](properties)
     val response = kafkaProducer.send(new ProducerRecord[String, String](stream, event))
 
-    (response.get().offset()+"", response.get().checksum(), response.get().partition()+"")
+    Event(response.get().offset()+"", response.get().checksum(), response.get().partition()+"")
   }
 
   override def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String): List[JSONObject] = {

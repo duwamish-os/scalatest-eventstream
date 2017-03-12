@@ -11,6 +11,7 @@ import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.kinesis.AmazonKinesisClient
 import com.amazonaws.services.kinesis.model.{AmazonKinesisException, GetRecordsRequest, GetShardIteratorRequest, PutRecordRequest}
 import org.json.JSONObject
+import org.scalatest.eventstream.events.Event
 import org.scalatest.eventstream.{ConsumerConfig, EmbeddedStream, StreamConfig}
 
 import scala.collection.JavaConversions._
@@ -36,6 +37,8 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   val region = AppConfig.getProperty("stream.region")
 
   private val awsAuthProfile = AppConfig.getProperty("authentication.profile")
+
+  println(awsAuthProfile)
 
   private val credentials: ProfileCredentialsProvider = new ProfileCredentialsProvider(awsAuthProfile)
   private val httpConfiguration: ClientConfiguration = new ClientConfiguration()
@@ -84,7 +87,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     }
   }
 
-  override def appendEvent(stream: String, event: String): (String, Long, String) = {
+  override def appendEvent(stream: String, event: String): Event = {
     val nativeEvent = new PutRecordRequest()
     nativeEvent.setStreamName(stream)
     nativeEvent.setData(ByteBuffer.wrap(event.getBytes))
@@ -92,7 +95,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
     val response = nativeConsumer.putRecord(nativeEvent)
 
-    (response.getSequenceNumber, 0l, response.getShardId)
+    Event(response.getSequenceNumber, 0l, response.getShardId)
   }
 
   override def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String):
@@ -156,6 +159,10 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
   override def dropConsumerState(stateTable: String): String = {
     val consumerOffset = new AmazonDynamoDBClient(credentials, httpConfiguration)
+    if(region != null && region != "") {
+      consumerOffset.withRegion(Regions.fromName(region))
+    }
+
     val dynamoDB = new DynamoDB(consumerOffset)
     val deleteState = dynamoDB.getTable(stateTable).delete()
     assert(deleteState.getSdkHttpMetadata.getHttpStatusCode == 200)
