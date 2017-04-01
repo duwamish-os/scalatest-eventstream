@@ -5,6 +5,8 @@ import org.scalatest.eventstream.EmbeddedStream
 import org.scalatest.eventstream.kafka.KafkaEmbeddedStream
 import org.scalatest.eventstream.kinesis.KinesisEmbeddedStream
 
+import scala.collection.JavaConversions._
+
 /**
   * Created by prayagupd
   * on 2/10/17.
@@ -12,7 +14,13 @@ import org.scalatest.eventstream.kinesis.KinesisEmbeddedStream
 
 class EmbeddedEventStreamFactory {
   def create(): EmbeddedStream = {
-    ConfigFactory.load("application.properties").getString("stream.driver") match {
+    val appConfig = ConfigFactory.load("application.properties")
+    println("config keys - ")
+    appConfig.entrySet().foreach({ x =>
+      println(x)
+    })
+
+    appConfig.getString("stream.driver") match {
       case "Kafka" => new KafkaEmbeddedStream
       case "Kinesis" => new KinesisEmbeddedStream
       case _ => throw new RuntimeException("You forgot to configure the stream driver.")

@@ -8,7 +8,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
   * on 2/23/17.
   */
 
-class KinesisEmbeddedStreamSpecs extends FunSuite with BeforeAndAfterEach {
+class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEach {
 
   val eventStream = new KinesisEmbeddedStream
 

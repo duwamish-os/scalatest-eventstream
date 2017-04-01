@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 import java.util.{Date, Properties, UUID}
 
 import com.amazonaws.ClientConfiguration
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
@@ -40,7 +40,11 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
   println(awsAuthProfile)
 
-  private val credentials: ProfileCredentialsProvider = new ProfileCredentialsProvider(awsAuthProfile)
+  private def credentials: AWSCredentialsProvider = {
+    Option(awsAuthProfile).map(x => System.setProperty("aws.profile", awsAuthProfile))
+    new DefaultAWSCredentialsProviderChain()
+  }
+
   private val httpConfiguration: ClientConfiguration = new ClientConfiguration()
     ProxyHostOpt.map(httpConfiguration.setProxyHost(_))
     PortOpt.map(x => httpConfiguration.setProxyPort(x.toInt))
