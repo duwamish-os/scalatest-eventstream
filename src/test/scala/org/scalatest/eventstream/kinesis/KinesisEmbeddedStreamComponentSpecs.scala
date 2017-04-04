@@ -12,18 +12,19 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
 
   val eventStream = new KinesisEmbeddedStream
 
-  implicit val streamConfig = StreamConfig(stream = "TestStream", numOfPartition = 1)
+  implicit val streamConfig = StreamConfig(stream = "EmbeddedStream_Component", numOfPartition = 1)
 
   var partitionId = ""
 
   override protected def beforeEach(): Unit = {
     partitionId = eventStream.startBroker._2.head
   }
+
   override protected def afterEach(): Unit = eventStream.destroyBroker
 
   test("appends and consumes an event") {
 
-    eventStream.appendEvent("TestStream", """{"eventId" : "uniqueId", "data" : "something-secret"}""".stripMargin)
+    eventStream.appendEvent("EmbeddedStream_Component", """{"eventId" : "uniqueId", "data" : "something-secret"}""".stripMargin)
 
     Thread.sleep(1500)
 
