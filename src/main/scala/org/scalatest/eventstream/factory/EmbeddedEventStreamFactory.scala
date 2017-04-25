@@ -1,7 +1,7 @@
 package org.scalatest.eventstream.factory
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.eventstream.EmbeddedStream
+import org.scalatest.eventstream.{Config, EmbeddedStream}
 import org.scalatest.eventstream.kafka.KafkaEmbeddedStream
 import org.scalatest.eventstream.kinesis.KinesisEmbeddedStream
 
@@ -14,10 +14,12 @@ import scala.collection.JavaConversions._
 
 class EmbeddedEventStreamFactory {
   def create(): EmbeddedStream = {
-    val appConfig = ConfigFactory.load("application.properties")
+    val appConfig = ConfigFactory.load(Config.getConfig)
+
     println("config keys - ")
+
     appConfig.entrySet().foreach({ x =>
-      println(x)
+      //println(x)
     })
 
     appConfig.getString("stream.driver") match {

@@ -1,5 +1,7 @@
 package org.scalatest.eventstream.kinesis
 
+import java.util.Properties
+
 import org.scalatest.eventstream.{ConsumerConfig, StreamConfig}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
@@ -12,7 +14,13 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
 
   val eventStream = new KinesisEmbeddedStream
 
-  implicit val streamConfig = StreamConfig(stream = "EmbeddedStream_Component", numOfPartition = 1)
+  private val AppConfig = new Properties(){{
+    load(this.getClass.getClassLoader.getResourceAsStream("application.properties"))
+  }}
+
+  val resourceIdentifier = AppConfig.getProperty("application.resource.identifier")
+
+  implicit val streamConfig = StreamConfig(stream = s"${resourceIdentifier}-EmbeddedStream_Component", numOfPartition = 1)
 
   var partitionId = ""
 
@@ -24,12 +32,33 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
 
   test("appends and consumes an event") {
 
-    eventStream.appendEvent("EmbeddedStream_Component", """{"eventId" : "uniqueId", "data" : "something-secret"}""".stripMargin)
+    eventStream.appendEvent(
+      s"${resourceIdentifier}-EmbeddedStream_Component", """{"eventId" : "uniqueId", "data" : "something-secret"}""".stripMargin)
 
     Thread.sleep(1500)
 
     implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer", partitionId = partitionId, strategy = "TRIM_HORIZON")
     assert(eventStream.consumeEvent(streamConfig, consumerConfig, streamConfig.stream).size == 1)
+  }
+
+  test("appends and consumes an event by eventStreamId") {
+
+    val event2 = eventStream.appendEvent(
+      s"${resourceIdentifier}-EmbeddedStream_Component", """{"eventId" : "uniqueId002", "data" : "something-very-secret"}""".stripMargin)
+
+    val event1 = eventStream.appendEvent(
+      s"${resourceIdentifier}-EmbeddedStream_Component", """{"eventId" : "uniqueId001", "data" : "something-super-secret"}""".stripMargin)
+
+    Thread.sleep(1500)
+
+    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer1", partitionId = partitionId, strategy = "AT_SEQUENCE_NUMBER")
+
+    val events = eventStream.findEventByEventId(streamConfig, consumerConfig, streamConfig.stream, event2.offset)
+
+    assert(events.size == 1)
+    println("==========================")
+    println(events.head)
+    println("==========================")
   }
 
 }

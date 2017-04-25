@@ -9,12 +9,13 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.kinesis.AmazonKinesisClient
-import com.amazonaws.services.kinesis.model.{AmazonKinesisException, GetRecordsRequest, GetShardIteratorRequest, PutRecordRequest}
+import com.amazonaws.services.kinesis.model._
 import org.json.JSONObject
 import org.scalatest.eventstream.events.Event
-import org.scalatest.eventstream.{ConsumerConfig, EmbeddedStream, StreamConfig}
+import org.scalatest.eventstream.{Config, ConsumerConfig, EmbeddedStream, StreamConfig}
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
   * Created by prayagupd
@@ -27,8 +28,9 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   private val A_SECOND = 1000
   private val EACH_WAIT = 9
 
+  val config = Config.getConfig
   private val AppConfig = new Properties(){{
-    load(this.getClass.getClassLoader.getResourceAsStream("application.properties"))
+    load(this.getClass.getClassLoader.getResourceAsStream(config))
   }}
 
   private val ProxyHostOpt = Option[String](AppConfig.getProperty("stream.http.proxy.host"))
@@ -154,6 +156,37 @@ class KinesisEmbeddedStream extends EmbeddedStream {
         true
       }
     }
+  }
+
+  /**
+    * http://docs.aws.amazon.com/kinesis/latest/APIReference/API_GetShardIterator.html
+    */
+  def findEventByEventId(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String,
+                         eventId: String): List[JSONObject] = {
+    val getShardIteratorRequest: GetShardIteratorRequest = new GetShardIteratorRequest
+    getShardIteratorRequest.setStreamName(stream)
+    getShardIteratorRequest.setShardId(consumerConfig.partitionId)
+    getShardIteratorRequest.setShardIteratorType(consumerConfig.strategy)
+    getShardIteratorRequest.setStartingSequenceNumber(eventId)
+
+    val iterator = nativeConsumer.getShardIterator(getShardIteratorRequest).getShardIterator
+
+    val recordsRequest = new GetRecordsRequest()
+    recordsRequest.setShardIterator(iterator)
+    recordsRequest.setLimit(1)
+
+    println(s"consuming bytes - ${consumerConfig.partitionId} ${iterator}")
+
+    var events = nativeConsumer.getRecords(recordsRequest)
+
+    if(events.getRecords.isEmpty) {
+      Thread.sleep(A_SECOND)
+    }
+
+    events = nativeConsumer.getRecords(recordsRequest)
+
+    events.getRecords.map(payloadBytes => new String(payloadBytes.getData.array()))
+      .map(json => new JSONObject(json)).toList
   }
 
   override def assertStreamExists(streamConfig: StreamConfig): Unit =  {
