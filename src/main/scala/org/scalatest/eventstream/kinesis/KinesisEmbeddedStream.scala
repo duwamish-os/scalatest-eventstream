@@ -28,6 +28,10 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   private val A_SECOND = 1000
   private val EACH_WAIT = 9
 
+  val strategyMap = Map("earliest" -> "TRIM_HORIZON",
+    "latest" -> "LATEST",
+  "at_event_offset" -> "AT_SEQUENCE_NUMBER")
+
   val config = Config.getConfig
   private val AppConfig = new Properties(){{
     load(this.getClass.getClassLoader.getResourceAsStream(config))
@@ -109,7 +113,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     val getShardIteratorRequest: GetShardIteratorRequest = new GetShardIteratorRequest
     getShardIteratorRequest.setStreamName(stream)
     getShardIteratorRequest.setShardId(consumerConfig.partitionId)
-    getShardIteratorRequest.setShardIteratorType(consumerConfig.strategy)
+    getShardIteratorRequest.setShardIteratorType(strategyMap(consumerConfig.strategy))
 
     val iterator = nativeConsumer.getShardIterator(getShardIteratorRequest).getShardIterator
 
@@ -117,7 +121,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     recordsRequest.setShardIterator(iterator)
     recordsRequest.setLimit(10)
 
-    println(s"consuming - ${consumerConfig.partitionId} ${iterator}")
+    println(s"consuming partition - ${consumerConfig.partitionId} ${iterator}")
 
     var events = nativeConsumer.getRecords(recordsRequest)
 
@@ -166,7 +170,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     val getShardIteratorRequest: GetShardIteratorRequest = new GetShardIteratorRequest
     getShardIteratorRequest.setStreamName(stream)
     getShardIteratorRequest.setShardId(consumerConfig.partitionId)
-    getShardIteratorRequest.setShardIteratorType(consumerConfig.strategy)
+    getShardIteratorRequest.setShardIteratorType(strategyMap(consumerConfig.strategy))
     getShardIteratorRequest.setStartingSequenceNumber(eventId)
 
     val iterator = nativeConsumer.getShardIterator(getShardIteratorRequest).getShardIterator

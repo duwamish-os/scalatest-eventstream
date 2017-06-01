@@ -37,7 +37,7 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
 
     Thread.sleep(1500)
 
-    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer", partitionId = partitionId, strategy = "TRIM_HORIZON")
+    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer", partitionId = partitionId, strategy = "earliest")
     assert(eventStream.consumeEvent(streamConfig, consumerConfig, streamConfig.stream).size == 1)
   }
 
@@ -51,7 +51,7 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
 
     Thread.sleep(1500)
 
-    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer1", partitionId = partitionId, strategy = "AT_SEQUENCE_NUMBER")
+    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer1", partitionId = partitionId, strategy = "at_event_offset")
 
     val events = eventStream.findEventByEventId(streamConfig, consumerConfig, streamConfig.stream, event2.offset)
 

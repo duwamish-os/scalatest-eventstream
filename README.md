@@ -1,12 +1,20 @@
 scalatest stream-specs
 ----------------------
 
-Kinesis usage
--------------
-- seup auth profile in `application.properties`
+- setup auth profile in `application.properties`
 
-```
-class KinesisEmbeddedStreamSpecs extends FunSuite with BeforeAndAfterEach {
+| strategy           | kinesis               | kafka     |
+|--------------------|-----------------------|-----------|
+| earliest           | TRIM_HORIZON          | earliest  |
+| latest             | LATEST                | latest    |
+| at_event_offset    | AT_SEQUENCE_NUMBER    |           |
+| after_event_offset | AFTER_SEQUENCE_NUMBER |           |
+| at_timestamp       | AT_TIMESTAMP          |           |
+
+KinesisStream usage
+
+```scala
+class KinesisEmbeddedStreamSpecs extends FunSuite with BeforeAndAfterEach with Mathcers {
 
   val eventStream = new KinesisEmbeddedStream
 
@@ -17,16 +25,18 @@ class KinesisEmbeddedStreamSpecs extends FunSuite with BeforeAndAfterEach {
   override protected def beforeEach(): Unit = {
     partitionId = eventStream.startBroker._2.head
   }
+  
   override protected def afterEach(): Unit = eventStream.destroyBroker
 
   test("appends and consumes an event") {
 
-    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer", partitionId = partitionId, strategy = "TRIM_HORIZON")
+    implicit val consumerConfig = ConsumerConfig(name = "TestStreamConsumer", partitionId = partitionId, strategy = "earliest")
+    
     eventStream.appendEvent("TestStream", """{"eventId" : "uniqueId", "data" : "something-secret"}""".stripMargin)
 
     Thread.sleep(1500)
 
-    assert(eventStream.consumeEvent(streamConfig, consumerConfig, streamConfig.stream).size == 1)
+    eventStream.consumeEvent(streamConfig, consumerConfig, streamConfig.stream).size shouldBe 1
   }
 
 }
