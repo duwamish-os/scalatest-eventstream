@@ -19,4 +19,5 @@ trait EmbeddedStream {
   def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig, stream: String): List[JSONObject]
   def assertStreamExists(streamConfig: StreamConfig): Unit
   def dropConsumerState(stateTable : String) : String
+  def listStreams(implicit streamConfig: StreamConfig): List[String]
 }

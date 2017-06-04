@@ -15,7 +15,6 @@ import org.scalatest.eventstream.events.Event
 import org.scalatest.eventstream.{Config, ConsumerConfig, EmbeddedStream, StreamConfig}
 
 import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
 
 /**
   * Created by prayagupd
@@ -196,6 +195,10 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   override def assertStreamExists(streamConfig: StreamConfig): Unit =  {
     val actualStatus = nativeConsumer.describeStream(streamConfig.stream).getStreamDescription.getStreamStatus
     assert(actualStatus == "ACTIVE")
+  }
+
+  override def listStreams(implicit streamConfig: StreamConfig): List[String] = {
+    List()
   }
 
   override def dropConsumerState(stateTable: String): String = {

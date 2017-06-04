@@ -3,14 +3,14 @@ package org.scalatest.eventstream.kinesis
 import java.util.Properties
 
 import org.scalatest.eventstream.{ConsumerConfig, StreamConfig}
-import org.scalatest.{BeforeAndAfterEach, FunSuite}
+import org.scalatest.{BeforeAndAfterEach, FunSuite, Matchers}
 
 /**
   * Created by prayagupd
   * on 2/23/17.
   */
 
-class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEach {
+class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEach with Matchers {
 
   val eventStream = new KinesisEmbeddedStream
 
@@ -60,5 +60,4 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
     println(events.head)
     println("==========================")
   }
-
 }
