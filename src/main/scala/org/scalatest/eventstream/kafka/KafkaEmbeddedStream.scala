@@ -6,7 +6,6 @@ import java.util.{Collections, Date, Properties, UUID}
 import kafka.admin.{AdminUtils, RackAwareMode}
 import kafka.server.{KafkaConfig, KafkaServer}
 import kafka.utils.{StateServer, ZkUtils}
-import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.I0Itec.zkclient.{ZkClient, ZkConnection}
 import org.apache.kafka.clients.consumer.{ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
@@ -56,6 +55,8 @@ class KafkaEmbeddedStream extends EmbeddedStream {
   }
 
   override def appendEvent(stream: String, event: String): Event = {
+    //FIXME fix to read emitter config from application.properties
+
     val properties = new Properties() {{
       val resource = classOf[KafkaEmbeddedStream].getClassLoader.getResourceAsStream("producer.properties")
       println("==========================================")
@@ -117,11 +118,6 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     stateConnection._1.close()
 
     (stream, List("0"), "ACTIVE")
-  }
-
-  def startZooKeeper(zkLogsDir: Directory)(
-    implicit config: EmbeddedKafkaConfig): Unit = {
-    stateFactory = Option(startZooKeeper(config.zooKeeperPort, zkLogsDir))
   }
 
   def startZooKeeper(zooKeeperPort: Int, zkLogsDir: Directory): ServerCnxnFactory = {
