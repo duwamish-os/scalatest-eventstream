@@ -32,6 +32,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   "at_event_offset" -> "AT_SEQUENCE_NUMBER")
 
   val config = Config.getConfig
+
   private val AppConfig = new Properties(){{
     load(this.getClass.getClassLoader.getResourceAsStream(config))
   }}
