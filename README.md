@@ -91,3 +91,25 @@ class MyKinesisStreamConsumerSpecs extends FunSuite with BeforeAndAfterEach with
 }
 
 ```
+
+how to use it
+-------------
+
+build it
+
+```bash
+git clone https://github.com/duwamish-os/scalatest-eventstream.git
+cd scalatest-eventstream
+mvn clean install
+```
+
+use it as maven dependency
+
+```xml
+<dependency>
+  <groupId>org.scalatest.eventstream</groupId>
+  <artifactId>scalatest-eventstream</artifactId>
+  <version>1.0</version>
+  <scope>test</scope>
+</dependency>
+```

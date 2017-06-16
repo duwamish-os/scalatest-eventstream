@@ -5,6 +5,7 @@ import java.util.Properties
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.scalatest.{BeforeAndAfterAll, FunSpec, Matchers}
 import org.scalatest.eventstream.StreamConfig
+import org.scalatest.eventstream.tags.KafkaStreamTag
 
 /**
   * Created by prayagupd
@@ -26,7 +27,7 @@ class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Match
   }
 
   describe("Kafka Embedded stream") {
-    it("does consume some events") {
+    it("does consume some events", KafkaStreamTag) {
 
       //uses application.properties
       //emitter.broker.endpoint=localhost:9092

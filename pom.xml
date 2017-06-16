@@ -120,6 +120,7 @@
           <junitxml>.</junitxml>
           <filereports>test.log</filereports>
           <parallel>false</parallel>
+          <tagsToInclude>KafkaStream</tagsToInclude>
         </configuration>
         <executions>
           <execution>
