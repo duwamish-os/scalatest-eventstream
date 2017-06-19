@@ -10,10 +10,13 @@ Streaming architecture.
 need to setup AWS auth profile in `application.properties` so that you can emit 
 or consume events from KinesisStream. In that sense KinesisStream is Pseudo-Embedded.
 
+- Stream can be configured with a config `stream.driver` (`"Kafka"` or `"Kinesis"`).
+
 Emitter configs
 ---------------
 
 ```
+stream.driver
 emitter.broker.endpoint
 emitter.event.key.serializer
 emitter.event.value.serializer
