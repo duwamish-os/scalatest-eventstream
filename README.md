@@ -1,7 +1,29 @@
-scalatest stream-specs
-----------------------
+scalatest-eventstream
+---------------------
 
-- setup auth profile in `application.properties`
+- This project is a scalatest API for integration/component testing 
+Streaming architecture.
+
+- Currently supports two popular eventstores KafkaStream and KinesisStream.
+
+- For KinesisStream, it uses AWS Kinesis, as kinesis can not be run in local, so you 
+need to setup AWS auth profile in `application.properties` so that you can emit 
+or consume events from KinesisStream. In that sense KinesisStream is Pseudo-Embedded.
+
+- Stream can be configured with a config `stream.driver` (`"Kafka"` or `"Kinesis"`).
+
+Emitter configs
+---------------
+
+```
+stream.driver
+emitter.broker.endpoint
+emitter.event.key.serializer
+emitter.event.value.serializer
+```
+
+Consumer strategies
+-------------------
 
 | strategy           | kafka     | kinesis               |
 |--------------------|-----------|-----------------------|
@@ -90,4 +112,26 @@ class MyKinesisStreamConsumerSpecs extends FunSuite with BeforeAndAfterEach with
 
 }
 
+```
+
+how to use it
+-------------
+
+build it
+
+```bash
+git clone https://github.com/duwamish-os/scalatest-eventstream.git
+cd scalatest-eventstream
+mvn clean install
+```
+
+use it as maven dependency
+
+```xml
+<dependency>
+  <groupId>org.scalatest.eventstream</groupId>
+  <artifactId>scalatest-eventstream</artifactId>
+  <version>1.0</version>
+  <scope>test</scope>
+</dependency>
 ```

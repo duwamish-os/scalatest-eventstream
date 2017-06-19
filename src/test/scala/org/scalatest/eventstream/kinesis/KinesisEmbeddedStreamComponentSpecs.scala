@@ -2,6 +2,7 @@ package org.scalatest.eventstream.kinesis
 
 import java.util.Properties
 
+import org.scalatest.eventstream.tags.KinesisTagged
 import org.scalatest.eventstream.{ConsumerConfig, StreamConfig}
 import org.scalatest.{BeforeAndAfterEach, FunSuite, Matchers}
 
@@ -30,7 +31,7 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
 
   override protected def afterEach(): Unit = eventStream.destroyBroker
 
-  test("appends and consumes an event") {
+  test("appends and consumes an event", KinesisTagged) {
 
     eventStream.appendEvent(
       s"${resourceIdentifier}-EmbeddedStream_Component", """{"eventId" : "uniqueId", "data" : "something-secret"}""".stripMargin)
@@ -41,7 +42,7 @@ class KinesisEmbeddedStreamComponentSpecs extends FunSuite with BeforeAndAfterEa
     assert(eventStream.consumeEvent(streamConfig, consumerConfig, streamConfig.stream).size == 1)
   }
 
-  test("appends and consumes an event by eventStreamId") {
+  test("appends and consumes an event by eventStreamId", KinesisTagged) {
 
     val event2 = eventStream.appendEvent(
       s"${resourceIdentifier}-EmbeddedStream_Component", """{"eventId" : "uniqueId002", "data" : "something-very-secret"}""".stripMargin)
