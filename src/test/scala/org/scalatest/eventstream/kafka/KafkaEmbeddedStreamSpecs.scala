@@ -13,8 +13,9 @@ import org.scalatest.eventstream.tags.KafkaStreamTag
   */
 
 class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Matchers {
+
   implicit val config =
-    StreamConfig(streamTcpPort = 9092, streamStateTcpPort = 2181, stream = "test-topic", numOfPartition = 1)
+    StreamConfig(streamTcpPort = 9092, streamStateTcpPort = 2181, stream = "gregor-samsa-for-no-use", numOfPartition = 1)
 
   val kafkaStream = new KafkaEmbeddedStream
 
@@ -27,24 +28,24 @@ class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Match
   }
 
   describe("Kafka Embedded stream") {
-    it("does consume some events", KafkaStreamTag) {
+    it("does consume earliest events", KafkaStreamTag) {
 
       //uses application.properties
       //emitter.broker.endpoint=localhost:9092
       //emitter.event.key.serializer=org.apache.kafka.common.serialization.StringSerializer
       //emitter.event.value.serializer=org.apache.kafka.common.serialization.StringSerializer
 
-      kafkaStream.appendEvent("test-topic", """{"MyEvent" : { "myKey" : "myValue"}}""")
+      kafkaStream.appendEvent("gregor-samsa-stream-earliest", """{"MyEvent" : { "myKey" : "myValue"}}""")
 
       val consumerProperties = new Properties()
       consumerProperties.put("bootstrap.servers", "localhost:9092")
       consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
       consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
-      consumerProperties.put("group.id", "something")
+      consumerProperties.put("group.id", "something_earliest")
       consumerProperties.put("auto.offset.reset", "earliest")
 
       val myConsumer = new KafkaConsumer[String, String](consumerProperties)
-      myConsumer.subscribe(java.util.Collections.singletonList("test-topic"))
+      myConsumer.subscribe(java.util.Collections.singletonList("gregor-samsa-stream-earliest"))
 
       val events = myConsumer.poll(2000)
 
@@ -58,11 +59,11 @@ class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Match
       consumerProperties.put("bootstrap.servers", "localhost:9092")
       consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
       consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
-      consumerProperties.put("group.id", "something")
-      consumerProperties.put("auto.offset.reset", "latest")
+      consumerProperties.put("group.id", "something_earliest")
+      consumerProperties.put("auto.offset.reset", "earliest")
 
       val myConsumer = new KafkaConsumer[String, String](consumerProperties)
-      myConsumer.subscribe(java.util.Collections.singletonList("latest-test-stream"))
+      myConsumer.subscribe(java.util.Collections.singletonList("gregor-samsa-stream-latest"))
 
       val eventsBeforeEmit = myConsumer.poll(2000)
       myConsumer.poll(2000).count() shouldBe 0
@@ -71,7 +72,7 @@ class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Match
       //emitter.broker.endpoint=localhost:9092
       //emitter.event.key.serializer=org.apache.kafka.common.serialization.StringSerializer
       //emitter.event.value.serializer=org.apache.kafka.common.serialization.StringSerializer
-      kafkaStream.appendEvent("latest-test-stream", """{"MyEvent" : { "myKey" : "myValue"}}""")
+      kafkaStream.appendEvent("gregor-samsa-stream-latest", """{"MyEvent" : { "myKey" : "myValue"}}""")
 
       val events = myConsumer.poll(2000)
 

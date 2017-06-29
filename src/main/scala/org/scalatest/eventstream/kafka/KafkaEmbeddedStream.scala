@@ -53,7 +53,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
 
     println(s"creating stream ${streamConfig.stream} after setup : ${String.join(",", listStreams(streamConfig))}")
 
-    createStreamAndWait(streamConfig.stream, streamConfig.numOfPartition)
+    createStreamAndWait(streamConfig)
 
     (streamConfig.stream, List("0"), "ACTIVE") //FIXME partitions, responds 0 as default now
   }
@@ -123,31 +123,33 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     assert(streamExists)
   }
 
-  override def createStreamAndWait(stream: String, partition: Int): (String, List[String], String) = {
-    println(s"creating stream ${stream}://${partition}")
+  override def createStreamAndWait(implicit config: StreamConfig): (String, List[String], String) = {
+    println(s"creating stream ${config.stream}://${config.numOfPartition}")
 
-    if (describeStream(stream)) {
-      println(s"stream $stream exists")
+    if (describeStream(config)) {
+      println(s"stream ${config.stream} exists")
 
-      return (stream, List("0"), "ACTIVE")
+      return (config.stream, List("0"), "ACTIVE") //FIXME partition
     }
 
-    val stateConnection = StateServer.createConnection("localhost:2181")
+    val stateConnection = StateServer.createConnection(s"localhost:${config.streamStateTcpPort}")
 
-    AdminUtils.createTopic(stateConnection._2, stream, partition, replicationFactor = 1, new Properties() {},
+    AdminUtils.createTopic(stateConnection._2, config.stream, config.numOfPartition, replicationFactor = 1, new Properties() {},
       RackAwareMode.Enforced)
 
     stateConnection._1.close()
 
-    println(s"stream created ${stream}://${partition}")
+    println(s"stream ${config.stream}:[${0 to config.numOfPartition}] created")
 
-    (stream, List("0"), "ACTIVE")
+    (config.stream, List("0"), "ACTIVE") //FIXME
   }
 
-  def describeStream(stream: String): Boolean = {
-    val streamExists = AdminUtils.topicExists(new ZkUtils(new ZkClient(s"localhost:2181", 10000, 15000),
-      new ZkConnection(s"localhost:2181"), false), stream)
-    streamExists
+  override def describeStream(implicit streamConfig: StreamConfig): Boolean = {
+    val stateSocket = s"localhost:${streamConfig.streamStateTcpPort}"
+
+    val streamExists = AdminUtils.topicExists(new ZkUtils(new ZkClient(stateSocket, 10000, 15000),
+      new ZkConnection(stateSocket), false), streamConfig.stream)
+    return streamExists
   }
 
   def startZooKeeper(zooKeeperPort: Int, zkLogsDir: Directory): ServerCnxnFactory = {

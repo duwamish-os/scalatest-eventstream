@@ -63,14 +63,14 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
   override def startBroker(implicit streamConfig: StreamConfig) : (String, List[String], String) = {
     println(s"Starting a broker at ${new Date()}")
-    createStreamAndWait(streamConfig.stream, streamConfig.numOfPartition)
+    createStreamAndWait(streamConfig)
   }
 
-  override def createStreamAndWait(stream: String, partition: Int): (String, List[String], String) = {
-    val created = nativeConsumer.createStream(stream, partition).getSdkHttpMetadata.getHttpStatusCode == 200
+  override def createStreamAndWait(implicit config: StreamConfig): (String, List[String], String) = {
+    val created = nativeConsumer.createStream(config.stream, config.numOfPartition).getSdkHttpMetadata.getHttpStatusCode == 200
     assert(created)
-    waitWhileStreamIsActed(stream, "ACTIVE")
-    val desc = nativeConsumer.describeStream(stream)
+    waitWhileStreamIsActed(config.stream, "ACTIVE")
+    val desc = nativeConsumer.describeStream(config.stream)
     (desc.getStreamDescription.getStreamName, desc.getStreamDescription.getShards.map(_.getShardId).toList,
       desc.getStreamDescription.getStreamStatus)
   }
@@ -192,6 +192,8 @@ class KinesisEmbeddedStream extends EmbeddedStream {
     events.getRecords.map(payloadBytes => new String(payloadBytes.getData.array()))
       .map(json => new JSONObject(json)).toList
   }
+
+  override def describeStream(implicit streamConfig: StreamConfig): Boolean = false //TODO
 
   override def assertStreamExists(streamConfig: StreamConfig): Unit =  {
     val actualStatus = nativeConsumer.describeStream(streamConfig.stream).getStreamDescription.getStreamStatus

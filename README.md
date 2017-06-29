@@ -15,12 +15,12 @@ or consume events from KinesisStream. In that sense KinesisStream is Pseudo-Embe
 Emitter configs
 ---------------
 
-```
-stream.driver
-emitter.broker.endpoint
-emitter.event.key.serializer
-emitter.event.value.serializer
-```
+| config                           | values      |
+|----------------------------------|-------------|
+| stream.driver                    |             |
+| emitter.broker.endpoint          |             |
+| emitter.event.key.serializer     |             |
+| emitter.event.value.serializer   |             |
 
 Consumer strategies
 -------------------
