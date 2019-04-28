@@ -4,7 +4,7 @@ scalatest-eventstream
 - This project is a scalatest API for integration/component testing 
 Streaming architecture.
 
-- Currently supports two popular eventstores KafkaStream and KinesisStream.
+- Currently supports two popular eventstores **KafkaStream** and **KinesisStream**.
 
 - For KinesisStream, it uses AWS Kinesis, as kinesis can not be run in local, so you 
 need to setup AWS auth profile in `application.properties` so that you can emit 
@@ -122,7 +122,12 @@ build it
 ```bash
 git clone https://github.com/duwamish-os/scalatest-eventstream.git
 cd scalatest-eventstream
+
+# test against Kafka by default
 mvn clean install
+#to test against Kinesis, change tags in pom.xml
+<tagsToInclude>KinesisStream</tagsToInclude>
+
 ```
 
 use it as maven dependency

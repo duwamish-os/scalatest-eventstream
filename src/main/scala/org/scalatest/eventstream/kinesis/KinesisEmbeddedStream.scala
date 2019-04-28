@@ -17,7 +17,7 @@ import org.scalatest.eventstream.{Config, ConsumerConfig, EmbeddedStream, Stream
 import scala.collection.JavaConversions._
 
 /**
-  * Created by prayagupd
+  * author prayagupd
   * on 2/17/17.
   */
 
