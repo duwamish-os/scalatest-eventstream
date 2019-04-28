@@ -12,7 +12,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <kafka-api.version>0.10.2.1</kafka-api.version>
+    <kafka-api.version>0.10.2.2</kafka-api.version>
     <amazon-kinesis-client.version>1.10.0</amazon-kinesis-client.version>
   </properties>
 
@@ -121,7 +121,7 @@
           <junitxml>.</junitxml>
           <filereports>test.log</filereports>
           <parallel>false</parallel>
-          <tagsToInclude>KinesisStream</tagsToInclude>
+          <tagsToInclude>KafkaStream</tagsToInclude>
         </configuration>
         <executions>
           <execution>
