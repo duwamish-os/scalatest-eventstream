@@ -15,7 +15,12 @@ object StateServer {
     val sessionTimeOutInMs = 15 * 1000
     val connectionTimeOutInMs = 10 * 1000
 
-    val zkClient = new ZkClient(zookeeperHosts, sessionTimeOutInMs, connectionTimeOutInMs, ZKStringSerializer)
+    val zkClient = new ZkClient(
+      zookeeperHosts,
+      sessionTimeOutInMs,
+      connectionTimeOutInMs,
+      ZKStringSerializer
+    )
     val zkUtils = new ZkUtils(zkClient, new ZkConnection(zookeeperHosts), false)
 
     (zkClient, zkUtils)

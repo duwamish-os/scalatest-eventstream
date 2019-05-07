@@ -1,6 +1,7 @@
 package org.scalatest.eventstream.kafka
 
 import java.net.InetSocketAddress
+import java.time.{LocalDateTime, ZonedDateTime}
 import java.util
 import java.util.{Collections, Date, Properties, UUID}
 
@@ -23,7 +24,7 @@ import scala.reflect.io.Directory
 /**
   * Embedded eventstream for kafka
   *
-  * Created by prayagupd
+  * author prayagupd
   * on 2/9/17.
   */
 
@@ -35,16 +36,22 @@ class KafkaEmbeddedStream extends EmbeddedStream {
   private[this] var brokers: Option[KafkaServer] = None
   private[this] val logsDirs = mutable.Buffer.empty[Directory]
 
-  val emitterConfig = new util.HashMap[String, String](){{
-    put("emitter.broker.endpoint", "bootstrap.servers")
-    put("emitter.event.key.serializer", "key.serializer")
-    put("emitter.event.value.serializer", "value.serializer")
-  }}
+  val emitterConfig = new util.HashMap[String, String]() {
+    {
+      put("emitter.broker.endpoint", "bootstrap.servers")
+      put("emitter.event.key.serializer", "key.serializer")
+      put("emitter.event.value.serializer", "value.serializer")
+//      put("broker.offsets.topic.replication.factor", "offsets.topic.replication.factor")
+//      put("broker.transaction.state.log.replication.factor", "transaction.state.log.replication.factor")
+//      put("broker.transaction.state.log.min.isr", "transaction.state.log.min.isr")
+    }
+  }
 
   override def startBroker(implicit streamConfig: StreamConfig): (String, List[String], String) = {
 
-    val stateLogsDir = Directory.makeTemp(s"stream-state-logs-${new Date().getTime}")
-    val streamBrokerLogsDir = Directory.makeTemp(s"stream-broker-logs-${new Date().getTime}")
+    val seconds = ZonedDateTime.now().toEpochSecond
+    val stateLogsDir = Directory.makeTemp(s"stream-state-logs-$seconds")
+    val streamBrokerLogsDir = Directory.makeTemp(s"stream-broker-logs-$seconds")
 
     stateFactory = Option(startZooKeeper(streamConfig.streamStateTcpPort, stateLogsDir))
     brokers = Option(startKafkaBroker(streamConfig, streamBrokerLogsDir))
@@ -72,24 +79,36 @@ class KafkaEmbeddedStream extends EmbeddedStream {
 
     val map = new mutable.HashMap[String, String]()
 
-    new Properties() {{
-      val resource = classOf[KafkaEmbeddedStream].getClassLoader.getResourceAsStream(config)
-      println("==========================================")
-      println(resource)
-      println("==========================================")
-      load(resource)
-    }}.entrySet().toSet.filter(kv => kv.getKey.toString.startsWith("emitter."))
+    new Properties() {
+      {
+        val resource = classOf[KafkaEmbeddedStream].getClassLoader.getResourceAsStream(config)
+        println("==========================================")
+        println("resource: " + resource)
+        println("==========================================")
+        load(resource)
+      }
+    }.entrySet().toSet.filter(kv => kv.getKey.toString.startsWith("emitter."))
       .foreach(entry => map.put(emitterConfig.get(entry.getKey.toString), entry.getValue.toString))
 
     val kafkaProducer = new KafkaProducer[String, String](map)
     val response = kafkaProducer.send(new ProducerRecord[String, String](stream, event))
 
-    Event(response.get().offset()+"", response.get().checksum(), response.get().partition()+"")
+
+    val p = Event(
+      response.get().offset() + "",
+      response.get().checksum(),
+      response.get().partition() + ""
+    )
+
+    println(s"emitted an event $p to $stream")
+
+    p
   }
 
   override def consumeEvent(implicit streamConfig: StreamConfig, consumerConfig: ConsumerConfig,
                             stream: String): List[JSONObject] = {
-    val nativeKafkaConsumer = new KafkaConsumer[String, String](new Properties() {{
+    val nativeKafkaConsumer = new KafkaConsumer[String, String](new Properties() {
+      {
         put("bootstrap.servers", s"localhost:${streamConfig.streamTcpPort}")
         put("client.id", s"${consumerConfig.name}")
         put("group.id", s"${consumerConfig.name}_group_${UUID.randomUUID()}")
@@ -116,7 +135,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     val streamExists = AdminUtils.topicExists(new ZkUtils(new ZkClient(s"localhost:${streamConfig.streamStateTcpPort}",
       10000, 15000), new ZkConnection(s"localhost:${streamConfig.streamStateTcpPort}"), false), streamConfig.stream)
 
-    if(!streamExists) {
+    if (!streamExists) {
       println("KafkaStreams : " + listStreams(streamConfig).mkString(","))
     }
 
@@ -177,6 +196,9 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     properties.setProperty("auto.create.topics.enable", "true")
     properties.setProperty("log.dir", kafkaLogDir.toAbsolute.path)
     properties.setProperty("log.flush.interval.messages", 1.toString)
+    properties.setProperty("offsets.topic.replication.factor", 1.toString)
+    properties.setProperty("transaction.state.log.replication.factor", "1")
+    properties.setProperty("transaction.state.log.min.isr", "1")
 
     // The total memory used for log deduplication across all cleaner threads, keep it small to not exhaust suite memory
     properties.setProperty("log.cleaner.dedupe.buffer.size", "1048577")

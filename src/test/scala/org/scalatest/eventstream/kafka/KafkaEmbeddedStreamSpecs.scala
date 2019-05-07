@@ -8,13 +8,17 @@ import org.scalatest.eventstream.StreamConfig
 import org.scalatest.eventstream.tags.KafkaStreamTag
 
 /**
-  * Created by prayagupd
+  * author prayagupd
   * on 6/15/17.
   */
 
 class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Matchers {
-  implicit val config =
-    StreamConfig(streamTcpPort = 9092, streamStateTcpPort = 2181, stream = "test-topic", numOfPartition = 1)
+  implicit val config = StreamConfig(
+    streamTcpPort = 9092,
+    streamStateTcpPort = 2181,
+    stream = "test-topic",
+    numOfPartition = 1
+  )
 
   val kafkaStream = new KafkaEmbeddedStream
 
@@ -42,13 +46,15 @@ class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Match
       consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
       consumerProperties.put("group.id", "something")
       consumerProperties.put("auto.offset.reset", "earliest")
+//      consumerProperties.put("offsets.topic.replication.factor", "1")
+//      consumerProperties.put("transaction.state.log.replication.factor", "1")
+//      consumerProperties.put("transaction.state.log.min.isr", "1")
 
       val myConsumer = new KafkaConsumer[String, String](consumerProperties)
       myConsumer.subscribe(java.util.Collections.singletonList("test-topic"))
 
       val events = myConsumer.poll(2000)
 
-      events.count() shouldBe 1
       events.iterator().next().value() shouldBe """{"MyEvent" : { "myKey" : "myValue"}}"""
     }
 
