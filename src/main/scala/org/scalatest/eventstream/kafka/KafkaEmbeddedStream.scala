@@ -183,7 +183,7 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     val zkServer = new ZooKeeperServer(zkLogsDir.toFile.jfile, zkLogsDir.toFile.jfile, tickTime)
 
     val cnxnFactory = ServerCnxnFactory.createFactory
-    cnxnFactory.configure(new InetSocketAddress("localhost", zooKeeperPort), 1024)
+    cnxnFactory.configure(new InetSocketAddress("0.0.0.0", zooKeeperPort), 1024)
     cnxnFactory.startup(zkServer)
 
     println(s"Stream-state-server started ${cnxnFactory.getLocalAddress.getHostName}:${cnxnFactory.getLocalPort} - at ${zkLogsDir.toFile}")

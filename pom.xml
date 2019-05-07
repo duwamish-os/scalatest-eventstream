@@ -12,7 +12,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <kafka-api.version>1.1.0</kafka-api.version>
+    <kafka-api.version>0.10.2.2</kafka-api.version>
     <amazon-kinesis-client.version>1.10.0</amazon-kinesis-client.version>
   </properties>
 
@@ -21,7 +21,7 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <version>2.11.8</version>
+      <version>2.12.1</version>
       <scope>compile</scope>
     </dependency>
 
@@ -34,7 +34,7 @@
 
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.11</artifactId>
+      <artifactId>scalatest_2.12</artifactId>
       <version>3.0.1</version>
       <scope>compile</scope>
     </dependency>
@@ -48,7 +48,7 @@
 
     <dependency>
       <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.11</artifactId>
+      <artifactId>kafka_2.12</artifactId>
       <version>${kafka-api.version}</version>
       <scope>compile</scope>
       <exclusions>
