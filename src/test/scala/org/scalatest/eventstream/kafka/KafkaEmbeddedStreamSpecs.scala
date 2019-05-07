@@ -1,10 +1,10 @@
 package org.scalatest.eventstream.kafka
 
-import java.util.Properties
+import java.util.{Properties, UUID}
 
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.scalatest.{BeforeAndAfterAll, FunSpec, Matchers}
-import org.scalatest.eventstream.StreamConfig
+import org.scalatest.eventstream.{ConsumerConfig, StreamConfig}
 import org.scalatest.eventstream.tags.KafkaStreamTag
 
 /**
@@ -42,10 +42,11 @@ class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Match
 
       val consumerProperties = new Properties()
       consumerProperties.put("bootstrap.servers", "localhost:9092")
+      consumerProperties.put("client.id", s"something_client_${UUID.randomUUID().toString}")
+      consumerProperties.put("group.id", s"something_group_${UUID.randomUUID().toString}")
+      consumerProperties.put("auto.offset.reset", "earliest")
       consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
       consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
-      consumerProperties.put("group.id", "something")
-      consumerProperties.put("auto.offset.reset", "earliest")
 //      consumerProperties.put("offsets.topic.replication.factor", "1")
 //      consumerProperties.put("transaction.state.log.replication.factor", "1")
 //      consumerProperties.put("transaction.state.log.min.isr", "1")
@@ -55,6 +56,7 @@ class KafkaEmbeddedStreamSpecs extends FunSpec with BeforeAndAfterAll with Match
 
       val events = myConsumer.poll(2000)
 
+      println(events.partitions())
       events.iterator().next().value() shouldBe """{"MyEvent" : { "myKey" : "myValue"}}"""
     }
 
