@@ -190,4 +190,4 @@ use it as maven dependency
 TODO
 ----
 - upgrade kafka from 0.10 to 2.2.x
-- upgrade scala to 2.12.x
+- upgrade kinesis client to 2.2

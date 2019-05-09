@@ -8,11 +8,16 @@ import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
-import com.amazonaws.services.kinesis.AmazonKinesisClient
-import com.amazonaws.services.kinesis.model._
+import software.amazon.awssdk.services.kinesis.DefaultKinesisClientBuilder
+import software.amazon.awssdk.services.kinesis.DefaultKinesisClient
+import software.amazon.awssdk.services.kinesis.model._
+import software.amazon.kinesis
+//import com.amazonaws.services.kinesis.AmazonKinesisClient
+//import com.amazonaws.services.kinesis.model._
 import org.json.JSONObject
 import org.scalatest.eventstream.events.Event
 import org.scalatest.eventstream.{Config, ConsumerConfig, EmbeddedStream, StreamConfig}
+import software.amazon.kinesis.common.KinesisClientUtil
 
 import scala.collection.JavaConversions._
 
@@ -27,15 +32,19 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   private val A_SECOND = 1000
   private val EACH_WAIT = 9
 
-  val strategyMap = Map("earliest" -> "TRIM_HORIZON",
+  val strategyMap = Map(
+    "earliest" -> "TRIM_HORIZON",
     "latest" -> "LATEST",
-  "at_event_offset" -> "AT_SEQUENCE_NUMBER")
+    "at_event_offset" -> "AT_SEQUENCE_NUMBER"
+  )
 
   val config = Config.getConfig
 
-  private val AppConfig = new Properties(){{
-    load(this.getClass.getClassLoader.getResourceAsStream(config))
-  }}
+  private val AppConfig = new Properties() {
+    {
+      load(this.getClass.getClassLoader.getResourceAsStream(config))
+    }
+  }
 
   private val ProxyHostOpt = Option[String](AppConfig.getProperty("stream.http.proxy.host"))
   private val PortOpt = Option[String](AppConfig.getProperty("stream.http.proxy.port"))
@@ -52,16 +61,18 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   }
 
   private val httpConfiguration: ClientConfiguration = new ClientConfiguration()
-    ProxyHostOpt.map(httpConfiguration.setProxyHost(_))
-    PortOpt.map(x => httpConfiguration.setProxyPort(x.toInt))
+  ProxyHostOpt.map(httpConfiguration.setProxyHost(_))
+  PortOpt.map(x => httpConfiguration.setProxyPort(x.toInt))
 
-  private val nativeConsumer = new AmazonKinesisClient(credentials, httpConfiguration)
+  KinesisClientUtil.createKinesisAsyncClient()
 
-  if(region != null && region != "") {
+  private val nativeConsumer = new DefaultKinesisClient(credentials, httpConfiguration)
+
+  if (region != null && region != "") {
     nativeConsumer.withRegion(Regions.fromName(region))
   }
 
-  override def startBroker(implicit streamConfig: StreamConfig) : (String, List[String], String) = {
+  override def startBroker(implicit streamConfig: StreamConfig): (String, List[String], String) = {
     println(s"Starting a broker at ${new Date()}")
     createStreamAndWait(streamConfig.stream, streamConfig.numOfPartition)
   }
@@ -125,7 +136,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
     var events = nativeConsumer.getRecords(recordsRequest)
 
-    if(events.getRecords.isEmpty) {
+    if (events.getRecords.isEmpty) {
       Thread.sleep(A_SECOND)
     }
 
@@ -154,7 +165,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
       println(s"stream $stream is $actualStatus == waiting to be ${expectedStatus}")
       actualStatus.equals(expectedStatus)
     } catch {
-      case e : AmazonKinesisException => {
+      case e: AmazonKinesisException => {
         println(s"Error querying the stream ${stream}, as it might have been " +
           s"already deleted, ${e.getMessage}.")
         true
@@ -183,7 +194,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
     var events = nativeConsumer.getRecords(recordsRequest)
 
-    if(events.getRecords.isEmpty) {
+    if (events.getRecords.isEmpty) {
       Thread.sleep(A_SECOND)
     }
 
@@ -193,7 +204,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
       .map(json => new JSONObject(json)).toList
   }
 
-  override def assertStreamExists(streamConfig: StreamConfig): Unit =  {
+  override def assertStreamExists(streamConfig: StreamConfig): Unit = {
     val actualStatus = nativeConsumer.describeStream(streamConfig.stream).getStreamDescription.getStreamStatus
     assert(actualStatus == "ACTIVE")
   }
@@ -204,7 +215,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
 
   override def dropConsumerState(stateTable: String): String = {
     val consumerOffset = new AmazonDynamoDBClient(credentials, httpConfiguration)
-    if(region != null && region != "") {
+    if (region != null && region != "") {
       consumerOffset.withRegion(Regions.fromName(region))
     }
 
