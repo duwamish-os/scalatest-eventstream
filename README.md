@@ -114,6 +114,52 @@ class MyKinesisStreamConsumerSpecs extends FunSuite with BeforeAndAfterEach with
 
 ```
 
+check ports
+---
+
+```bash
+λ netstat -na | grep 9092
+tcp4      21      0  127.0.0.1.9092         127.0.0.1.63067        CLOSE_WAIT 
+tcp4       0      0  127.0.0.1.63067        127.0.0.1.9092         FIN_WAIT_2 
+tcp4      24      0  127.0.0.1.9092         127.0.0.1.62984        CLOSE_WAIT 
+tcp4      24      0  127.0.0.1.9092         127.0.0.1.62975        CLOSE_WAIT 
+tcp4       0      0  127.0.0.1.9092         127.0.0.1.62958        ESTABLISHED
+tcp4       0      0  127.0.0.1.62958        127.0.0.1.9092         ESTABLISHED
+tcp4       0      0  127.0.0.1.9092         127.0.0.1.62957        ESTABLISHED
+tcp4       0      0  127.0.0.1.62957        127.0.0.1.9092         ESTABLISHED
+tcp4       0      0  127.0.0.1.9092         127.0.0.1.62953        ESTABLISHED
+tcp4       0      0  127.0.0.1.62953        127.0.0.1.9092         ESTABLISHED
+tcp4       0      0  127.0.0.1.9092         *.*                    LISTEN  
+
+λ netstat -na | grep 2181
+tcp4      49      0  127.0.0.1.2181         127.0.0.1.63202        CLOSE_WAIT 
+tcp4       0      0  127.0.0.1.63202        127.0.0.1.2181         FIN_WAIT_2 
+tcp4      49      0  127.0.0.1.2181         127.0.0.1.63041        CLOSE_WAIT 
+tcp4       0      0  127.0.0.1.63041        127.0.0.1.2181         FIN_WAIT_2 
+tcp6      49      0  ::1.2181               ::1.63034              CLOSE_WAIT 
+tcp6       0      0  ::1.63034              ::1.2181               FIN_WAIT_2 
+tcp6       0      0  ::1.2181               ::1.62955              ESTABLISHED
+tcp6       0      0  ::1.62955              ::1.2181               ESTABLISHED
+tcp6       0      0  ::1.2181               ::1.62954              ESTABLISHED
+tcp6       0      0  ::1.62954              ::1.2181               ESTABLISHED
+tcp4       0      0  127.0.0.1.2181         127.0.0.1.62952        ESTABLISHED
+tcp4       0      0  127.0.0.1.62952        127.0.0.1.2181         ESTABLISHED
+tcp46      0      0  *.2181                 *.*                    LISTEN
+
+
+kafka_2.12-1.1.0/bin/kafka-topics.sh --zookeeper localhost:2181 --list
+[2019-05-06 19:53:54,310] WARN Client session timed out, have not heard from server in 15003ms for sessionid 0x0 (org.apache.zookeeper.ClientCnxn)
+Exception in thread "main" kafka.zookeeper.ZooKeeperClientTimeoutException: Timed out waiting for connection while in state: CONNECTING
+	at kafka.zookeeper.ZooKeeperClient.$anonfun$waitUntilConnected$3(ZooKeeperClient.scala:225)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:12)
+	at kafka.utils.CoreUtils$.inLock(CoreUtils.scala:250)
+	at kafka.zookeeper.ZooKeeperClient.waitUntilConnected(ZooKeeperClient.scala:221)
+	at kafka.zookeeper.ZooKeeperClient.<init>(ZooKeeperClient.scala:95)
+	at kafka.zk.KafkaZkClient$.apply(KafkaZkClient.scala:1539)
+	at kafka.admin.TopicCommand$.main(TopicCommand.scala:57)
+	at kafka.admin.TopicCommand.main(TopicCommand.scala)
+```
+
 how to use it
 -------------
 
@@ -143,4 +189,6 @@ use it as maven dependency
 
 TODO
 ----
-- upgrade kafka from 0.10 to 2.2.x
+
+- upgrade kafka from 1.1.0 to 2.2.x
+- upgrade kinesis client to 2.2

@@ -8,7 +8,7 @@ import org.scalatest.eventstream.kinesis.KinesisEmbeddedStream
 import scala.collection.JavaConversions._
 
 /**
-  * Created by prayagupd
+  * author prayagupd
   * on 2/10/17.
   */
 
