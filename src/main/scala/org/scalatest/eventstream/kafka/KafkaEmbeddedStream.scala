@@ -11,8 +11,7 @@ import kafka.utils.{StateServer, ZkUtils}
 import org.I0Itec.zkclient.{ZkClient, ZkConnection}
 import org.apache.kafka.clients.consumer.{ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
-//import org.apache.kafka.common.security.auth.SecurityProtocol
-import org.apache.kafka.common.protocol.SecurityProtocol
+import org.apache.kafka.common.security.auth.SecurityProtocol
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.zookeeper.server.{ServerCnxnFactory, ZooKeeperServer}
 import org.json.JSONObject
@@ -32,7 +31,7 @@ import scala.reflect.io.Directory
 
 class KafkaEmbeddedStream extends EmbeddedStream {
 
-  val config = Config.getConfig
+  private val config = Config.getConfig
 
   private[this] var stateFactory: Option[ServerCnxnFactory] = None
   private[this] var brokers: Option[KafkaServer] = None
@@ -43,9 +42,6 @@ class KafkaEmbeddedStream extends EmbeddedStream {
       put("emitter.broker.endpoint", "bootstrap.servers")
       put("emitter.event.key.serializer", "key.serializer")
       put("emitter.event.value.serializer", "value.serializer")
-      //      put("broker.offsets.topic.replication.factor", "offsets.topic.replication.factor")
-      //      put("broker.transaction.state.log.replication.factor", "transaction.state.log.replication.factor")
-      //      put("broker.transaction.state.log.min.isr", "transaction.state.log.min.isr")
     }
   }
 
@@ -177,7 +173,8 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     streamExists
   }
 
-  def startZooKeeper(zooKeeperPort: Int, zkLogsDir: Directory): Option[ServerCnxnFactory] = {
+  def startZooKeeper(zooKeeperPort: Int,
+                     zkLogsDir: Directory): Option[ServerCnxnFactory] = {
     val tickTime = 2000
 
     val zkServer = new ZooKeeperServer(zkLogsDir.toFile.jfile, zkLogsDir.toFile.jfile, tickTime)
@@ -186,7 +183,8 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     cnxnFactory.configure(new InetSocketAddress("0.0.0.0", zooKeeperPort), 1024)
     cnxnFactory.startup(zkServer)
 
-    println(s"Stream-state-server started ${cnxnFactory.getLocalAddress.getHostName}:${cnxnFactory.getLocalPort} - at ${zkLogsDir.toFile}")
+    println(s"Stream-state-server started ${cnxnFactory.getLocalAddress.getHostName}:${cnxnFactory.getLocalPort} - " +
+      s"at ${zkLogsDir.toFile}")
     Option(cnxnFactory)
   }
 
@@ -199,8 +197,17 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     //kafka.server
 
     val properties: Properties = new Properties
-    properties.setProperty("zookeeper.connect", syncServiceAddress)
+    //Server Basics
+    //The id of the broker. This must be set to a unique integer for each broker.
     properties.setProperty("broker.id", "0")
+
+    //Socket Server Settings
+    properties.setProperty("num.network.threads", 3.toString)
+    properties.setProperty("num.io.threads", 8.toString)
+    properties.setProperty("socket.send.buffer.bytes", 102400.toString)
+    properties.setProperty("socket.receive.buffer.bytes", 102400.toString)
+    properties.setProperty("socket.request.max.bytes", 104857600.toString)
+
     properties.setProperty("listeners", listener)
     properties.setProperty("advertised.listeners", listener)
     properties.setProperty("host.name", "localhost")
@@ -208,34 +215,56 @@ class KafkaEmbeddedStream extends EmbeddedStream {
     properties.setProperty("port", config.streamTcpPort.toString)
     properties.setProperty("auto.create.topics.enable", "true")
     properties.setProperty("log.flush.interval.messages", "1")
-    properties.setProperty("log.dir", kafkaLogDir.toAbsolute.path)
-    properties.setProperty("log.flush.interval.messages", 1.toString)
-    properties.setProperty("offsets.topic.replication.factor", 1.toString)
-    properties.setProperty("offsets.topic.num.partitions", 1.toString)
-    properties.setProperty("transaction.state.log.replication.factor", "1")
-    properties.setProperty("transaction.state.log.min.isr", "1")
+    //Log Basics
+    properties.setProperty("log.dirs", kafkaLogDir.toAbsolute.path)
+    properties.setProperty("num.partitions", 1.toString)
+    properties.setProperty("num.recovery.threads.per.data.dir", 1.toString)
 
+    //Log Flush Policy
+    properties.setProperty("log.flush.interval.messages", 1.toString)
     // The total memory used for log de-duplication across all cleaner threads,
     // keep it small to not exhaust suite memory
     properties.setProperty("log.cleaner.dedupe.buffer.size", "1048577")
+    properties.setProperty("log.retention.hours", "168")
+    properties.setProperty("log.segment.bytes", "1073741824")
+    properties.setProperty("log.retention.check.interval.ms", "300000")
+
+    //Internal Topic Settings
+    properties.setProperty("offsets.topic.replication.factor", 1.toString)
+    //properties.setProperty("offsets.topic.num.partitions", 1.toString)
+    properties.setProperty("transaction.state.log.replication.factor", "1")
+    properties.setProperty("transaction.state.log.min.isr", "1")
+
+    //Zookeeper
+    properties.setProperty("zookeeper.connect", syncServiceAddress)
+    properties.setProperty("zookeeper.connection.timeout.ms", 6000.toString)
+
+    //Group Coordinator Settings
+    properties.setProperty("group.initial.rebalance.delay.ms", 0.toString)
 
     config.nodes.foreach { case (key, value) => properties.setProperty(key, value) }
 
     val broker = new KafkaServer(new KafkaConfig(properties))
     broker.startup()
 
-    println(s"KafkaStream Broker started at ${properties.get("host.name")}:${properties.get("port")} at ${kafkaLogDir.toFile}")
+    println(s"KafkaStream Broker started at ${properties.get("host.name")}:${properties.get("port")} " +
+      s"at ${kafkaLogDir.toFile}")
     broker
   }
 
+  //TODO fix with new api
   override def listStreams(implicit streamConfig: StreamConfig): List[String] = {
-    val zk = new ZkUtils(new ZkClient(s"localhost:${streamConfig.streamStateTcpPort}",
-      10000, 15000), new ZkConnection(s"localhost:${streamConfig.streamStateTcpPort}"), false)
+    val zk = new ZkUtils(
+      new ZkClient(s"localhost:${streamConfig.streamStateTcpPort}",
+      10000,
+      15000),
+      new ZkConnection(s"localhost:${streamConfig.streamStateTcpPort}"), false
+    )
 
-    AdminUtils.fetchAllTopicConfigs(zk).map(_._1).toList
+    AdminUtils.fetchAllTopicConfigs(zk).keys.toList
   }
 
-  def stopStreamBroker() = {
+  def stopStreamBroker(): Unit = {
     brokers.foreach { b =>
       b.shutdown()
       b.awaitShutdown()

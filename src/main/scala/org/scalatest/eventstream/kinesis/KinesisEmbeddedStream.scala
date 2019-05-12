@@ -8,18 +8,22 @@ import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
+import com.amazonaws.services.kinesis.AmazonKinesisClient
+import com.amazonaws.services.kinesis.model.AmazonKinesisException
 import software.amazon.awssdk.services.kinesis.DefaultKinesisClientBuilder
 import software.amazon.awssdk.services.kinesis.DefaultKinesisClient
-import software.amazon.awssdk.services.kinesis.model._
 import software.amazon.kinesis
 //import com.amazonaws.services.kinesis.AmazonKinesisClient
-//import com.amazonaws.services.kinesis.model._
+
+import com.amazonaws.services.kinesis.model._
+//import software.amazon.awssdk.services.kinesis.model._
 import org.json.JSONObject
 import org.scalatest.eventstream.events.Event
 import org.scalatest.eventstream.{Config, ConsumerConfig, EmbeddedStream, StreamConfig}
 import software.amazon.kinesis.common.KinesisClientUtil
 
 import scala.collection.JavaConversions._
+import software.amazon.awssdk.services.kinesis
 
 /**
   * author prayagupd
@@ -64,9 +68,7 @@ class KinesisEmbeddedStream extends EmbeddedStream {
   ProxyHostOpt.map(httpConfiguration.setProxyHost(_))
   PortOpt.map(x => httpConfiguration.setProxyPort(x.toInt))
 
-  KinesisClientUtil.createKinesisAsyncClient()
-
-  private val nativeConsumer = new DefaultKinesisClient(credentials, httpConfiguration)
+  private val nativeConsumer = new AmazonKinesisClient(credentials, httpConfiguration)
 
   if (region != null && region != "") {
     nativeConsumer.withRegion(Regions.fromName(region))

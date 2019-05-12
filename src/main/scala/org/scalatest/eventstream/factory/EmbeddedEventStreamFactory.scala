@@ -3,7 +3,7 @@ package org.scalatest.eventstream.factory
 import com.typesafe.config.ConfigFactory
 import org.scalatest.eventstream.{Config, EmbeddedStream}
 import org.scalatest.eventstream.kafka.KafkaEmbeddedStream
-import org.scalatest.eventstream.kinesis.KinesisEmbeddedStream
+//import org.scalatest.eventstream.kinesis.KinesisEmbeddedStream
 
 import scala.collection.JavaConversions._
 
@@ -24,7 +24,7 @@ class EmbeddedEventStreamFactory {
 
     appConfig.getString("stream.driver") match {
       case "Kafka" => new KafkaEmbeddedStream
-      case "Kinesis" => new KinesisEmbeddedStream
+//      case "Kinesis" => new KinesisEmbeddedStream
       case _ => throw new RuntimeException("You forgot to configure the stream driver.")
     }
   }
